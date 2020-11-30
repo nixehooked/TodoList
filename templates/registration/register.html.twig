@@ -1,21 +1,14 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Register{% endblock %}
+{% block header_title %}<h1>Créer un utilisateur</h1>{% endblock %}
+{% block header_img %}{% endblock %}
 
 {% block body %}
-    {% for flashError in app.flashes('verify_email_error') %}
-        <div class="alert alert-danger" role="alert">{{ flashError }}</div>
-    {% endfor %}
+    <div class="row">
+        {{ form_start(form, {'action' : path('user_create')}) }}
+        {{ form_widget(form) }}
 
-    <h1>Register</h1>
-
-    {{ form_start(registrationForm) }}
-        {{ form_row(registrationForm.email) }}
-        {{ form_row(registrationForm.plainPassword, {
-            label: 'Password'
-        }) }}
-        {{ form_row(registrationForm.agreeTerms) }}
-
-        <button type="submit" class="btn">Register</button>
-    {{ form_end(registrationForm) }}
+        <button type="submit" class="btn btn-success pull-right">Ajouter</button>
+        {{ form_end(form) }}
+    </div>
 {% endblock %}
