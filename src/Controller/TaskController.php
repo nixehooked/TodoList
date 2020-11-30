@@ -36,6 +36,7 @@ class TaskController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager = $this->getDoctrine()->getManager();
+            $task->setUser($this->getUser());
             $entityManager->persist($task);
             $entityManager->flush();
 
