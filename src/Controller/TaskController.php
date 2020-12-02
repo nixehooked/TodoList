@@ -80,7 +80,7 @@ class TaskController extends AbstractController
     }
 
     /**
-     * @Route("/{id}", name="task_delete", methods={"DELETE"})
+     * @Route("/{id}/delete", name="task_delete", methods={"DELETE"})
      */
     public function delete(Request $request, Task $task): Response
     {
@@ -90,6 +90,6 @@ class TaskController extends AbstractController
             $entityManager->flush();
         }
 
-        return $this->redirectToRoute('task_index');
+        return $this->redirectToRoute('task_list');
     }
 }
