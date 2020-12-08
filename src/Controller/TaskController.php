@@ -5,24 +5,43 @@ namespace App\Controller;
 use App\Entity\Task;
 use App\Form\TaskType;
 use App\Repository\TaskRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-/**
- * @Route("/task")
- */
 class TaskController extends AbstractController
 {
     /**
-     * @Route("/", name="task_list", methods={"GET"})
+     * @Route("/tasks", name="task_list")
      */
-    public function index(TaskRepository $taskRepository): Response
+    public function listAction(EntityManagerInterface $em, PaginatorInterface $paginator, Request $request)
     {
-        return $this->render('task/list.html.twig', [
-            'tasks' => $taskRepository->findAll(),
-        ]);
+        //return $this->render('task/list.html.twig', ['tasks' => $this->getDoctrine()->getRepository('App:Task')->findBy(['isDone' => 0], ['createdAt' => 'DESC'])]);
+
+        //$dql   = "SELECT id, created_at, title, content, is_done, author_id FROM task WHERE is_done = 0 ORDER BY created_at DESC";
+        //$query = $em->createQuery($dql);
+
+
+        $pagination = $paginator->paginate(
+            $this->getDoctrine()->getRepository('App:Task')->findBy(['isDone' => 0]),
+            $request->query->getInt('page', 1),
+            10
+        );
+
+        // parameters to template
+        return $this->render('task/list.html.twig', ['tasks' => $pagination, 'pagination' => $pagination]);
+
+    }
+
+    /**
+     * @Route("/tasks-finished", name="task_finished")
+     */
+    public function listActionFinished()
+    {
+        return $this->render('task/finished.html.twig', ['tasks' => $this->getDoctrine()->getRepository('App:Task')->findBy(['isDone' => 1])]);
     }
 
     /**
@@ -50,16 +69,6 @@ class TaskController extends AbstractController
     }
 
     /**
-     * @Route("/{id}", name="task_show", methods={"GET"})
-     */
-    public function show(Task $task): Response
-    {
-        return $this->render('task/show.html.twig', [
-            'task' => $task,
-        ]);
-    }
-
-    /**
      * @Route("/{id}/edit", name="task_edit", methods={"GET","POST"})
      */
     public function edit(Request $request, Task $task): Response
@@ -77,6 +86,24 @@ class TaskController extends AbstractController
             'task' => $task,
             'form' => $form->createView(),
         ]);
+    }
+
+    /**
+     * @Route("/tasks/{id}/toggle", name="task_toggle")
+     */
+    public function toggleTaskAction(Task $task)
+    {
+        $task->toggle(!$task->isDone());
+        $this->getDoctrine()->getManager()->flush();
+
+        if ($task->isDone() == 1) {
+            $this->addFlash('success', sprintf('La tâche %s a bien été marquée comme faite.', $task->getTitle()));
+        } else {
+            $this->addFlash('success', sprintf('La tâche %s a bien été marquée comme non terminé.', $task->getTitle()));
+        }
+
+
+        return $this->redirectToRoute('task_list');
     }
 
     /**
