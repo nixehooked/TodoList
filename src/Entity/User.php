@@ -7,11 +7,13 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @ORM\Entity(repositoryClass=UserRepository::class)
- * @UniqueEntity(fields={"email"}, message="There is already an account with this email")
+ * @UniqueEntity(fields={"email"}, message="Il existe déjà un compte avec cette email")
+ * @UniqueEntity(fields={"username"}, message="Il existe déjà un compte avec ce pseudo")
  */
 class User implements UserInterface
 {
@@ -24,6 +26,8 @@ class User implements UserInterface
 
     /**
      * @ORM\Column(type="string", length=180, unique=true)
+     * @Assert\NotBlank(message="Vous devez saisir une adresse email.")
+     * @Assert\Email(message="Le format de l'adresse n'est pas correcte.")
      */
     private $email;
 
@@ -42,6 +46,12 @@ class User implements UserInterface
      * @ORM\OneToMany(targetEntity=Task::class, mappedBy="user")
      */
     private $tasks;
+
+    /**
+     * @ORM\Column(type="string", length=255)
+     * @Assert\NotBlank(message="Vous devez saisir un nom d'utilisateur.")
+     */
+    private $username;
 
     public function __construct()
     {
@@ -152,6 +162,13 @@ class User implements UserInterface
                 $task->setUser(null);
             }
         }
+
+        return $this;
+    }
+
+    public function setUsername(string $username): self
+    {
+        $this->username = $username;
 
         return $this;
     }
