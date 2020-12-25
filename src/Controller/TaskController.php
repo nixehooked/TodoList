@@ -7,6 +7,7 @@ use App\Form\TaskType;
 use App\Repository\TaskRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,7 +46,7 @@ class TaskController extends AbstractController
     }
 
     /**
-     * @Route("/new", name="task_create", methods={"GET","POST"})
+     * @Route("/tasks/create", name="task_create", methods={"GET","POST"})
      */
     public function new(Request $request): Response
     {
@@ -69,7 +70,7 @@ class TaskController extends AbstractController
     }
 
     /**
-     * @Route("/{id}/edit", name="task_edit", methods={"GET","POST"})
+     * @Route("/{id}/edit", name="task_edit")
      */
     public function edit(Request $request, Task $task): Response
     {
@@ -79,7 +80,7 @@ class TaskController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->getDoctrine()->getManager()->flush();
 
-            return $this->redirectToRoute('task_index');
+            return $this->redirectToRoute('task_list');
         }
 
         return $this->render('task/edit.html.twig', [
@@ -107,15 +108,15 @@ class TaskController extends AbstractController
     }
 
     /**
-     * @Route("/{id}/delete", name="task_delete", methods={"DELETE"})
+     * @Route("/tasks/{id}/delete", name="task_delete")
      */
-    public function delete(Request $request, Task $task): Response
+    public function deleteTaskAction(Task $task)
     {
-        if ($this->isCsrfTokenValid('delete'.$task->getId(), $request->request->get('_token'))) {
-            $entityManager = $this->getDoctrine()->getManager();
-            $entityManager->remove($task);
-            $entityManager->flush();
-        }
+        $em = $this->getDoctrine()->getManager();
+        $em->remove($task);
+        $em->flush();
+
+        $this->addFlash('success', 'La tâche a bien été supprimée.');
 
         return $this->redirectToRoute('task_list');
     }

@@ -4,7 +4,7 @@ namespace App\Tests\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-class ConnexionControllerTest extends WebTestCase
+class SecurityControllerTest extends WebTestCase
 {
     public function testConnexion()
     {
@@ -18,6 +18,15 @@ class ConnexionControllerTest extends WebTestCase
 
         $crawler = $client->followRedirect();
 
-        return ['client' => $client, 'crawler' => $crawler];
+        //$this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertSame(1, $crawler->filter('h1')->count());
+    }
+
+    public function testLogout()
+    {
+        $client = static::createClient();
+        $crawler = $client->request('GET', '/logout');
+
+        $this->assertEquals(302, $client->getResponse()->getStatusCode());
     }
 }
