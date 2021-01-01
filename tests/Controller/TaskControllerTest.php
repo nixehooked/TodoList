@@ -1,134 +1,157 @@
 <?php
 
-namespace App\Tests\Controller;
+namespace App\Tests\App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Request;
+use App\Entity\Task;
+use App\Repository\TaskRepository;
 
-class TaskControllerTest extends ConnexionController
+class TaskControllerTest extends AbstractControllerTest
 {
-    public function testListAction()
+
+    /** @var TaskRepository */
+    protected $taskRepository;
+
+    protected function setUp(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        parent::setUp();
+        $this->taskRepository = self::$container->get(TaskRepository::class);
+    }
 
-        $crawler = $client->request('GET', '/tasks');
+    public function testList(): void
+    {
+        $this->client->request('GET', '/tasks');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        $this->assertSame("Liste des tâches en cours", $crawler->filter('h2')->text());
+        $this->loginWithAdmin();
+
+        $crawler = $this->client->request('GET', '/tasks');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+        self::assertContains('Créer une tâche', $crawler->filter('a.btn.btn-info.pull-right')->text());
     }
 
     public function testListActionFinished()
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        $this->client->request('GET', '/tasks');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        $crawler = $client->request('GET', '/tasks');
+        $this->loginWithAdmin();
+
+        $crawler = $this->client->request('GET', '/tasks');
 
         $link = $crawler->selectLink('Accéder à la liste des tâches terminés')->link();
-        $crawler = $client->click($link);
+        $crawler = $this->client->click($link);
 
         $this->assertSame("Liste des tâches terminées", $crawler->filter('h2')->text());
     }
 
-    public function testCreatePage()
+    public function testCreate(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        $this->client->request('GET', '/tasks/create');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        $crawler = $client->request('GET', '/tasks/create');
+        $this->loginWithAdmin();
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $crawler = $this->client->request('GET', '/tasks/create');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+        self::assertCount(3, $crawler->filter('input'));
+        self::assertEquals('Ajouter', $crawler->filter('button.btn.btn-success')->text());
+
+        $buttonCrawlerMode = $crawler->filter('form');
+        $form = $buttonCrawlerMode->form([
+            'task[title]' => 'Titre de la tâche 2',
+            'task[content]' => 'Description de la tâche 2'
+        ]);
+
+        $this->client->submit($form);
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+        self::assertEquals('task_list', $this->client->getRequest()->get('_route'));
+        self::assertEquals(
+            'La tâche a été bien été ajoutée.',
+            $crawler->filter('div.alert.alert-success')->text(null, true)
+        );
+
+        $task = $this->taskRepository->findOneBy(['title' => 'Titre de la tâche 2']);
+        self::assertInstanceOf(Task::class, $task);
+        self::assertEquals('Titre de la tâche 2', $task->getTitle());
+        self::assertEquals('Description de la tâche 2', $task->getContent());
+        self::assertEquals('nixe', $task->getUser()->getUsername());
+        self::assertEquals('nixedu06@gmail.com', $task->getUser()->getEmail());
     }
 
-
-    public function testCreateTask()
+    public function testEdit(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        $this->client->request('GET', '/tasks/2/edit');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        $crawler = $client->request('GET', '/tasks/create');
+        $this->loginWithAdmin();
 
-        $form = $crawler->selectButton('Ajouter')->form();
-        $form['task[title]'] = 'Test';
-        $form['task[content]'] = 'Ceci est un article de test';
-        $crawler = $client->submit($form);
+        $crawler = $this->client->request('GET', '/tasks/2/edit');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+        self::assertCount(3, $crawler->filter('input'));
+        self::assertEquals('Modifier', $crawler->filter('button.btn.btn-success.pull-right')->text());
 
-        $crawler = $client->followRedirect();
+        $buttonCrawlerMode = $crawler->filter('form');
+        $form = $buttonCrawlerMode->form([
+            'task[title]' => 'Titre de la tâche',
+            'task[content]' => 'Description de la tâche'
+        ]);
 
-        $this->assertSame(1, $crawler->filter('div.alert.alert-success')->count());
+        $this->client->submit($form);
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+        self::assertEquals('task_list', $this->client->getRequest()->get('_route'));
+        self::assertEquals(
+            'La tâche a bien été modifiée.',
+            $crawler->filter('div.alert.alert-success')->text(null, true)
+        );
+
+        $task = $this->taskRepository->findOneBy(['title' => 'Titre de la tâche']);
+        self::assertInstanceOf(Task::class, $task);
+        self::assertEquals('Titre de la tâche', $task->getTitle());
+        self::assertEquals('Description de la tâche', $task->getContent());
+        self::assertEquals('nixe', $task->getUser()->getUsername());
+        self::assertEquals('nixedu06@gmail.com', $task->getUser()->getEmail());
     }
 
-
-    public function testEditPage()
+    public function testToggle(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        $this->client->request('GET', '/tasks/2/toggle');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        $crawler = $client->request('GET', '/tasks');
+        $this->loginWithAdmin();
 
-        $link = $crawler->selectLink('Test')->link();
-        $crawler = $client->click($link);
+        $this->client->request('GET', '/tasks/2/toggle');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+        self::assertEquals('task_list', $this->client->getRequest()->get('_route'));
+        self::assertEquals(
+            'La tâche Titre de la tâche a bien été marquée comme faite.',
+            $crawler->filter('div.alert.alert-success')->text(null, true)
+        );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $task = $this->taskRepository->findOneBy(['title' => 'Titre de la tâche']);
+        self::assertInstanceOf(Task::class, $task);
+        self::assertEquals('2', $task->getIsDone());
     }
 
-
-    public function testEditTask()
+    public function testDelete(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        $this->client->request('DELETE', '/tasks/2/delete');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        $crawler = $client->request('GET', '/tasks');
+        $this->loginWithAdmin();
 
-        $link = $crawler->selectLink('Test')->link();
-        $crawler = $client->click($link);
+        $this->client->request('DELETE', '/tasks/2/delete');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+        self::assertEquals('task_list', $this->client->getRequest()->get('_route'));
+        self::assertEquals(
+            'La tâche a bien été supprimée.',
+            $crawler->filter('div.alert.alert-danger')->text(null, true)
+        );
 
-        $form = $crawler->selectButton('Modifier')->form();
-        $form['task[title]'] = 'Test';
-        $form['task[content]'] = 'Ceci est un article de test modifié';
-        $crawler = $client->submit($form);
-
-        $crawler = $client->followRedirect();
-
-        $this->assertSame(1, $crawler->filter('div.alert.alert-success')->count());
-    }
-
-    public function testToggleTask()
-    {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
-
-        $client->request('GET', '/tasks/5/toggle');
-
-        $this->assertEquals(302, $client->getResponse()->getStatusCode());
-
-        $crawler = $client->followRedirect();
-
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $this->assertEquals(1, $crawler->filter('div.alert-success')->count());
-    }
-
-
-    public function testDeleteTask()
-    {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
-
-        $client->request('GET', '/tasks/26/delete');
-
-        $this->assertEquals(302, $client->getResponse()->getStatusCode());
-
-        $crawler = $client->followRedirect();
-
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $this->assertEquals(1, $crawler->filter('div.alert-success')->count());
+        $task = $this->taskRepository->findOneBy(['title' => 'Titre de la tâche']);
+        self::assertEmpty($task);
     }
 }

@@ -63,6 +63,11 @@ class User implements UserInterface
         return $this->id;
     }
 
+    public function setId(int $id): int
+    {
+        return $this->id = $id;
+    }
+
     public function getEmail(): ?string
     {
         return $this->email;
@@ -90,16 +95,12 @@ class User implements UserInterface
      */
     public function getRoles(): array
     {
-        $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
-        $roles[] = 'ROLE_USER';
-
-        return array_unique($roles);
+        return $this->roles;
     }
 
     public function setRoles(array $roles): self
     {
-        $this->roles = $roles;
+        $this->roles[0] = $roles[0];
 
         return $this;
     }

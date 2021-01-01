@@ -69,25 +69,9 @@ class UserController extends AbstractController
 
             $this->addFlash('success', "L'utilisateur a bien été modifié");
 
-            return $this->redirectToRoute('user_list');
+            return $this->redirectToRoute('homepage');
         }
 
         return $this->render('user/edit.html.twig', ['form' => $form->createView(), 'user' => $user]);
-    }
-
-    /**
-     * @param User $user
-     * @return \Symfony\Component\HttpFoundation\RedirectResponse
-     * @Route("/users/{id}/delete", name="user_delete")
-     */
-    public function deleteUser(User $user)
-    {
-        $em = $this->getDoctrine()->getManager();
-        $em->remove($user);
-        $em->flush();
-
-        $this->addFlash('success', 'L\'utilisateur a bien été supprimé.');
-
-        return $this->redirectToRoute('user_list');
     }
 }
