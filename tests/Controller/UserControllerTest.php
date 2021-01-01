@@ -1,98 +1,106 @@
 <?php
 
-namespace App\Tests\Controller;
+namespace App\Tests\App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use App\Entity\User;
+use App\Repository\UserRepository;
 
-class UserControllerTest extends ConnexionController
+class UserControllerTest extends AbstractControllerTest
 {
 
-    public function testListAction()
+    /** @var UserRepository */
+    protected $userRepository;
+
+    protected function setUp(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
-
-        $link = $crawler->selectLink('Utilisateurs')->link();
-        $crawler = $client->click($link);
-
-        $this->assertSame("Liste des utilisateurs", $crawler->filter('h1')->text());
+        parent::setUp();
+        $this->userRepository = self::$container->get(UserRepository::class);
     }
 
-    public function testCreatePage()
+    public function testList(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        $this->client->request('GET', '/users');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        $link = $crawler->selectLink('Créer un utilisateur')->link();
-        $crawler = $client->click($link);
+        $this->loginWithAdmin();
 
-        $this->assertSame("Créer un utilisateur", $crawler->filter('h1')->text());
+        $crawler = $this->client->request('GET', '/users');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+        self::assertContains('Liste des utilisateurs', $crawler->filter('h1')->text());
+        self::assertContains('Modifier', $crawler->filter('a.btn.btn-success')->text());
     }
 
-    public function testCreateUser()
+    public function testCreate(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        $this->loginWithAdmin();
 
-        $crawler = $client->request('GET', '/users/create');
+        $crawler = $this->client->request('GET', '/users/create');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+        self::assertContains('Créer un utilisateur', $crawler->filter('h1')->text());
+        self::assertContains('Ajouter', $crawler->filter('button.btn.btn-success')->text());
+        self::assertCount(7, $crawler->filter('input'));
 
-        $form = $crawler->selectButton('Ajouter')->form();
-        $form['user[username]'] = 'demo';
-        $form['user[password][first]'] = 'demo';
-        $form['user[password][second]'] = 'demo';
-        $form['user[email]'] = 'demo@demo.fr';
-        $crawler = $client->submit($form);
+        $buttonCrawlerMode = $crawler->filter('form');
+        $form = $buttonCrawlerMode->form([
+            'user[username]' => 'admin',
+            'user[password][first]' => 'password',
+            'user[password][second]' => 'password',
+            'user[email]' => 'admin@gmail.com',
+            'user[roles]' => ['ROLE_ADMIN']
+        ]);
 
-        //$crawler = $client->followRedirect();
+        $this->client->submit($form);
 
-        $this->assertSame(1, $crawler->filter('div.alert.alert-success')->count());
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+        self::assertEquals('user_list', $this->client->getRequest()->get('_route'));
+        self::assertEquals(
+            'L\'utilisateur a bien été ajouté.',
+            $crawler->filter('div.alert.alert-success')->text(null, true)
+        );
 
-        $crawler = $client->request('GET', '/users');
-
-        $id = $crawler->filter("#user-demo p")->text();
-
-        $crawler = $client->request('DELETE', '/users/' . $id . '/delete');
-
-        $crawler = $client->followRedirect();
-
-        $this->assertSame(1, $crawler->filter('div.alert.alert-success')->count());
+        $user = $this->userRepository->findOneBy(['username' => 'admin2']);
+        self::assertInstanceOf(User::class, $user);
+        self::assertEquals('admin2', $user->getUsername());
+        self::assertEquals('admin2@gmail.com', $user->getEmail());
+        self::assertEquals('ROLE_ADMIN', $user->getRoles()[0]);
     }
 
-    public function testEditUser()
+    public function testEdit(): void
     {
-        $array = $this->connexion();
-        $client = $array['client'];
-        $crawler = $array['crawler'];
+        $this->client->request('GET', '/users/3/edit');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        $crawler = $client->request('GET', '/users/4/edit');
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->loginWithAdmin();
 
-        $this->assertSame('Nom d\'utilisateur', $crawler->filter('label[for="user_username"]')->text());
-        $this->assertSame('Mot de passe', $crawler->filter('label[for="user_password_first"]')->text());
-        $this->assertSame('Adresse email', $crawler->filter('label[for="user_email"]')->text());
+        $crawler = $this->client->request('GET', '/users/3/edit');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+        self::assertContains('Modifier', $crawler->filter('button.btn.btn-success')->text());
+        self::assertCount(7, $crawler->filter('input'));
 
-        $this->assertEquals(1, $crawler->filter('input[name="user[username]"]')->count());
-        $this->assertEquals(1, $crawler->filter('input[name="user[password][first]"]')->count());
-        $this->assertEquals(1, $crawler->filter('input[name="user[password][second]"]')->count());
-        $this->assertEquals(1, $crawler->filter('input[name="user[email]"]')->count());
+        $buttonCrawlerMode = $crawler->filter('form');
+        $form = $buttonCrawlerMode->form([
+            'user[username]' => 'admin3',
+            'user[password][first]' => 'password',
+            'user[password][second]' => 'password',
+            'user[email]' => 'admin3@gmail.com',
+            'user[roles]' => ['ROLE_ADMIN']
+        ]);
 
-        $form = $crawler->selectButton('Modifier')->form();
-        $form['user[username]'] = 'NixeTest';
-        $form['user[password][first]'] = 'root';
-        $form['user[password][second]'] = 'root';
-        $form['user[email]'] = 'nixetest@example.org';
-        $client->submit($form);
+        $this->client->submit($form);
 
-        $this->assertEquals(302, $client->getResponse()->getStatusCode());
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+        self::assertEquals('user_list', $this->client->getRequest()->get('_route'));
+        self::assertEquals(
+            'L\'utilisateur a bien été modifié',
+            $crawler->filter('div.alert.alert-success')->text(null, true)
+        );
 
-        $crawler = $client->followRedirect();
-
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $this->assertEquals(1, $crawler->filter('div.alert-success')->count());
-
+        $user = $this->userRepository->findOneBy(['username' => 'admin3']);
+        self::assertInstanceOf(User::class, $user);
+        self::assertEquals('admin3', $user->getUsername());
+        self::assertEquals('admin3@gmail.com', $user->getEmail());
+        self::assertEquals('ROLE_ADMIN', $user->getRoles()[0]);
     }
-
 }

@@ -1,32 +1,77 @@
 <?php
 
-namespace App\Tests\Controller;
+namespace App\Tests\App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-
-class SecurityControllerTest extends WebTestCase
+class SecurityControllerTest extends AbstractControllerTest
 {
-    public function testConnexion()
+
+    protected function setUp(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/login');
-
-        $form = $crawler->selectButton('Se connecter')->form();
-        $form['email'] = 'nixedu06@gmail.com';
-        $form['password'] = 'gtadead';
-        $crawler = $client->submit($form);
-
-        $crawler = $client->followRedirect();
-
-        //$this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $this->assertSame(1, $crawler->filter('h1')->count());
+        $this->client = self::createClient();
     }
 
-    public function testLogout()
+    public function testLoginWithValidData(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/logout');
+        $crawler = $this->client->request('GET', '/login');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+        self::assertCount(3, $crawler->filter('input'));
+        self::assertContains('Se connecter', $crawler->filter('button.btn.btn-success')->text());
 
-        $this->assertEquals(302, $client->getResponse()->getStatusCode());
+        $this->loginWithAdmin();
+
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+
+        self::assertContains('Créer une nouvelle tâche', $crawler->filter('a.btn.btn-success.btn-sm.mb-2')->text());
+        self::assertContains(
+            'Consulter la liste des tâches à faire',
+            $crawler->filter('a.btn.btn-info.btn-sm.mb-2')->text()
+        );
+        self::assertContains(
+            "Bienvenue sur Todo List, l'application vous permettant de gérer l'ensemble de vos tâches sans effort !",
+            $crawler->filter('h1')->text()
+        );
+    }
+
+    public function testLoginWithInvalidData(): void
+    {
+        $crawler = $this->client->request('GET', '/login');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        $buttonCrawlerMode = $crawler->filter('form');
+        $form = $buttonCrawlerMode->form([
+            'email' => 'test',
+            'password' => 'test'
+        ]);
+
+        $this->client->submit($form);
+
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+        self::assertEquals(
+            'Nom d\'utilisateur ou mot de passe invalide !',
+            $crawler->filter('div.alert.alert-danger')->text(null, true)
+        );
+    }
+
+    public function testLoginWithInvalidPassword(): void
+    {
+        $crawler = $this->client->request('GET', '/login');
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        $buttonCrawlerMode = $crawler->filter('form');
+        $form = $buttonCrawlerMode->form([
+            'email' => 'nixedu06@gmail.com',
+            'password' => 'test'
+        ]);
+
+        $this->client->submit($form);
+
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
+        $crawler = $this->client->followRedirect();
+        self::assertEquals(
+            'Nom d\'utilisateur ou mot de passe invalide !',
+            $crawler->filter('div.alert.alert-danger')->text(null, true)
+        );
     }
 }

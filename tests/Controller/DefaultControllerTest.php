@@ -1,20 +1,35 @@
 <?php
 
-namespace App\Tests\Controller;
+namespace App\Tests\App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use App\Tests\App\Controller\AbstractControllerTest;
 
-class DefaultControllerTest extends WebTestCase
+class DefaultControllerTest extends AbstractControllerTest
 {
-    public function testIndex()
+
+    protected function setUp(): void
     {
-        $client = static::createClient();
-        $crawler = $client->request('GET', '/');
+        $this->client = self::createClient();
+    }
 
-        $crawler = $client->followRedirect();
+    public function testIndex(): void
+    {
+        $this->client->request('GET', '/');
+        self::assertEquals(302, $this->client->getResponse()->getStatusCode());
 
-        //$this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $this->assertSame(1, $crawler->filter('button')->count());
-        //$this->assertContains('Welcome to Symfony', $crawler->filter('#container h1')->text());
+        $this->loginWithAdmin();
+
+        $crawler = $this->client->request('GET', '/');
+
+        self::assertEquals(200, $this->client->getResponse()->getStatusCode());
+        self::assertContains('Créer une nouvelle tâche', $crawler->filter('a.btn.btn-success.btn-sm.mb-2')->text());
+        self::assertContains(
+            'Consulter la liste des tâches à faire',
+            $crawler->filter('a.btn.btn-info.btn-sm.mb-2')->text()
+        );
+        self::assertContains(
+            "Bienvenue sur Todo List, l'application vous permettant de gérer l'ensemble de vos tâches sans effort !",
+            $crawler->filter('h1')->text()
+        );
     }
 }

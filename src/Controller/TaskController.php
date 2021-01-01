@@ -59,6 +59,7 @@ class TaskController extends AbstractController
             $task->setUser($this->getUser());
             $entityManager->persist($task);
             $entityManager->flush();
+            $this->addFlash('success', 'La tâche a été bien été ajoutée.');
 
             return $this->redirectToRoute('task_list');
         }
@@ -70,7 +71,7 @@ class TaskController extends AbstractController
     }
 
     /**
-     * @Route("/{id}/edit", name="task_edit")
+     * @Route("/tasks/{id}/edit", name="task_edit")
      */
     public function edit(Request $request, Task $task): Response
     {
@@ -79,6 +80,7 @@ class TaskController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->getDoctrine()->getManager()->flush();
+            $this->addFlash('success', 'La tâche a bien été modifiée.');
 
             return $this->redirectToRoute('task_list');
         }
@@ -116,7 +118,7 @@ class TaskController extends AbstractController
         $em->remove($task);
         $em->flush();
 
-        $this->addFlash('success', 'La tâche a bien été supprimée.');
+        $this->addFlash('error', 'La tâche a bien été supprimée.');
 
         return $this->redirectToRoute('task_list');
     }
