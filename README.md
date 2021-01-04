@@ -28,7 +28,8 @@
 
 7.Exécution des tests :
 
-<code>php bin/phpunit
+<code>php bin/phpunit</code>
+
 ou
-php bin/phpunit --coverage-html docs/test-coverage
-</code>
+
+<code>php bin/phpunit --coverage-html docs/test-coverage</code>
