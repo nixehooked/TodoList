@@ -4,6 +4,28 @@
 
 # Installation
 
-Copier le projet
+1. Copier le projet :
 
 <code>https://github.com/nixehooked/TodoList.git</code>
+
+2. Configurer la base de données dans le dossier .env
+
+3.Installer les dépendances :
+
+<code>composer install</code>
+
+4.Créer la base de données :
+
+<code>bin/console doctrine:database:create</code>
+
+5.Migration des tables de la base de données :
+
+<code>bin/console doctrine:schema:create</code>
+
+6.Mise en route du server :
+
+<code>symfony server:start</code>
+
+7.Exécution des tests :
+
+<code>php bin/phpunit</br>ou</br>php bin/phpunit --coverage-html docs/test-coverage</code>
