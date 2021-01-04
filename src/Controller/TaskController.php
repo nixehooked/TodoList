@@ -18,7 +18,7 @@ class TaskController extends AbstractController
     /**
      * @Route("/tasks", name="task_list")
      */
-    public function listAction(EntityManagerInterface $em, PaginatorInterface $paginator, Request $request)
+    public function listAction(PaginatorInterface $paginator, Request $request)
     {
         //return $this->render('task/list.html.twig', ['tasks' => $this->getDoctrine()->getRepository('App:Task')->findBy(['isDone' => 0], ['createdAt' => 'DESC'])]);
 
