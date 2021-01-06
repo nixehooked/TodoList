@@ -34,7 +34,6 @@ class TaskController extends AbstractController
 
         // parameters to template
         return $this->render('task/list.html.twig', ['tasks' => $pagination, 'pagination' => $pagination]);
-
     }
 
     /**
